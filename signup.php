@@ -1,10 +1,28 @@
 <?php
+require 'db.php';
 $message = "";
+$type = "info";
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $username = trim($_POST["username"]);
+    $full_name = trim($_POST["full_name"]);
+    $email = trim($_POST["email"]);
+
     if ($_POST["password"] !== $_POST["confirm"]) {
         $message = "Passwords do not match.";
+        $type = "danger";
     } else {
-        $message = "Signup form received for " . htmlspecialchars($_POST["name"]);
+        $hash = password_hash($_POST["password"], PASSWORD_DEFAULT);
+        try {
+            $stmt = $conn->prepare("INSERT INTO users (username, full_name, email, password_hash) VALUES (?, ?, ?, ?)");
+            $stmt->bind_param("ssss", $username, $full_name, $email, $hash);
+            $stmt->execute();
+            $message = "Account created for " . htmlspecialchars($username) . ".";
+            $type = "success";
+        } catch (mysqli_sql_exception $e) {
+            $message = "That username or email is already registered.";
+            $type = "danger";
+        }
     }
 }
 ?>
@@ -21,12 +39,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div class="card shadow-sm p-4" style="max-width: 380px; width: 100%;">
       <h1 class="h4 mb-3 text-center">Create an account</h1>
       <?php if ($message): ?>
-        <div class="alert alert-info"><?php echo $message; ?></div>
+        <div class="alert alert-<?php echo $type; ?>"><?php echo $message; ?></div>
       <?php endif; ?>
       <form method="post" action="signup.php">
         <div class="mb-3">
-          <label for="name" class="form-label">Full name</label>
-          <input type="text" class="form-control" id="name" name="name" required>
+          <label for="username" class="form-label">Username</label>
+          <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        <div class="mb-3">
+          <label for="full_name" class="form-label">Full name</label>
+          <input type="text" class="form-control" id="full_name" name="full_name" required>
         </div>
         <div class="mb-3">
           <label for="email" class="form-label">Email</label>
